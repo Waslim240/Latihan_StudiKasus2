@@ -1,0 +1,102 @@
+@file:Suppress("DeferredResultUnused")
+
+package waslim.binar.andlima.applikasinote.view.fragment
+
+import android.annotation.SuppressLint
+import android.app.AlertDialog
+import android.os.Bundle
+import androidx.fragment.app.Fragment
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.Toast
+import androidx.core.os.bundleOf
+import androidx.navigation.Navigation
+import androidx.recyclerview.widget.LinearLayoutManager
+import kotlinx.android.synthetic.main.custom_add.view.*
+import kotlinx.android.synthetic.main.fragment_home.*
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
+import waslim.binar.andlima.applikasinote.R
+import waslim.binar.andlima.applikasinote.adapter.AdapterNote
+import waslim.binar.andlima.applikasinote.local.Note
+import waslim.binar.andlima.applikasinote.local.NoteDatabase
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
+
+class HomeFragment : Fragment() {
+    private var db : NoteDatabase? = null
+
+    override fun onCreateView(
+        inflater: LayoutInflater, container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
+        // Inflate the layout for this fragment
+        return inflater.inflate(R.layout.fragment_home, container, false)
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        db = NoteDatabase.getInstance(requireContext())
+        addData()
+        getDataNote()
+    }
+
+    @SuppressLint("NewApi")
+    private fun addData(){
+        addData.setOnClickListener {
+            val alertA = LayoutInflater.from(requireContext())
+                .inflate(R.layout.custom_add, null, false)
+            val alertB = AlertDialog.Builder(requireContext())
+                .setView(alertA)
+                .create()
+
+            alertA.btn_input.setOnClickListener {
+                GlobalScope.async {
+                    val jdl = alertA.masukan_judul.text.toString()
+                    val ctt = alertA.masukan_catatan.text.toString()
+
+                    val current = LocalDateTime.now()
+                    val formatter = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM)
+                    val formatted = current.format(formatter)
+
+                    val simpan = db?.noteDao()?.insertNoteTaking(Note(null, jdl, formatted, ctt))
+
+                    requireActivity().runOnUiThread {
+                        if (simpan != 0.toLong()){
+                            Toast.makeText(requireContext(), "Berhasil Menambahkan", Toast.LENGTH_LONG).show()
+                            alertB.dismiss()
+                        } else {
+                            Toast.makeText(requireContext(), "Gagal Menambahkan", Toast.LENGTH_LONG).show()
+                        }
+                        activity?.recreate()
+                    }
+                }
+            }
+            alertB.show()
+        }
+    }
+
+
+
+    private fun getDataNote() {
+        rvNote.layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false)
+
+        GlobalScope.launch {
+            val listD = db?.noteDao()?.getAllNoteTaking()
+
+            activity?.runOnUiThread {
+                listD.let { it ->
+                    val adp = AdapterNote(it!!){
+                        val detail = bundleOf("datadetail" to it)
+                        Navigation.findNavController(requireView()).navigate(R.id.action_homeFragment_to_detailFragment, detail)
+                    }
+                    rvNote.adapter = adp
+                }
+            }
+        }
+    }
+}
