@@ -11,21 +11,26 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.core.os.bundleOf
+import androidx.lifecycle.asLiveData
 import androidx.navigation.Navigation
 import androidx.recyclerview.widget.LinearLayoutManager
 import kotlinx.android.synthetic.main.custom_add.view.*
 import kotlinx.android.synthetic.main.fragment_home.*
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import waslim.binar.andlima.applikasinote.R
 import waslim.binar.andlima.applikasinote.adapter.AdapterNote
+import waslim.binar.andlima.applikasinote.datastore.UserManager
 import waslim.binar.andlima.applikasinote.local.Note
 import waslim.binar.andlima.applikasinote.local.NoteDatabase
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
+@DelicateCoroutinesApi
+@SuppressLint("NewApi", "SetTextI18n")
 class HomeFragment : Fragment() {
     private var db : NoteDatabase? = null
 
@@ -43,9 +48,28 @@ class HomeFragment : Fragment() {
         db = NoteDatabase.getInstance(requireContext())
         addData()
         getDataNote()
+        logout()
+        getDataStore()
     }
 
-    @SuppressLint("NewApi")
+    private fun getDataStore(){
+        val userManager = UserManager(requireContext())
+        userManager.username.asLiveData().observe(viewLifecycleOwner){
+            welcome_username.text = "Welcome, $it"
+        }
+    }
+
+    private fun logout(){
+        logout.setOnClickListener {
+            val userManager = UserManager(requireContext())
+            GlobalScope.launch {
+                userManager.logout()
+            }
+            Navigation.findNavController(requireView()).navigate(R.id.action_homeFragment_to_loginFragment)
+            activity?.finish()
+        }
+    }
+
     private fun addData(){
         addData.setOnClickListener {
             val alertA = LayoutInflater.from(requireContext())
